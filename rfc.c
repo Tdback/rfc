@@ -1,5 +1,24 @@
 /*
- * Header comment and copyright license.
+ *
+ * Copyright © 2023 Tyler Dunneback <tylerdback@pm.me>
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the “Software”), to
+ * deal in the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 #include <ctype.h>
@@ -20,8 +39,7 @@ int f_format;
 
 const char *version = "version 20230907";
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     /*
      * Rewrite these with getopt and check flags f_clean, f_save, etc.
@@ -165,8 +183,7 @@ main(int argc, char *argv[])
 }
 
 /* Call this if using curl to save the file locally */
-void
-write_callback(void *contents, size_t size, size_t nitems, FILE *file)
+void write_callback(void *contents, size_t size, size_t nitems, FILE *file)
 {
     // printf("%.*s", (int)(size * nitems), (char *)contents);
     fwrite(contents, size, nitems, file);
