@@ -23,7 +23,7 @@
 
 #include <ctype.h>
 #include <errno.h>
-#include <limits.h>
+#include <limits.h>    /* For optarg int validation */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,16 +37,13 @@ int f_recent;
 int f_save;
 int f_format;
 
-const char *version = "version 20230907";
+const char *version = "version 20230912";
+
+void open_and_write(const char *);
+
 
 int main(int argc, char *argv[])
 {
-    /*
-     * Rewrite these with getopt and check flags f_clean, f_save, etc.
-     * Get rid of --help and simplify --version. Instead of help, just
-     * print out the usage. Otherwise users should read the man page.
-     */
-
     int ch;
 
     if (argc == 1) {
@@ -55,14 +52,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-
-
-    /*
-    printf("Cleaning up locally cached entries...");
-    Run clean function
-    sleep(1);
-    printf(" done; Successfully cleaned cache.\n");
-    */
 
     const char *format = "txt";
     int view_recent = 5;
@@ -94,15 +83,16 @@ int main(int argc, char *argv[])
             f_save = 1;
             break;
         case 'f':
-            f_format = 1;
-            if (strcmp(optarg, "txt") == 0 || strcmp(optarg, "html") == 0) {
-                format = optarg;
-            } else {
+            if (strcmp(optarg, "txt") != 0 && strcmp(optarg, "html") != 0) {
                 fprintf(stderr,
-                        "Invalid format argument: "
-                        "Expected value of 'txt' or 'html'...\n");
+                        "Invalid format argument: '%s'\n"
+                        "Expected value of 'txt' or 'html'...\n",
+                        optarg);
                 return 1;
             }
+
+            f_format = 1;
+            format = optarg;
             break;
         default:
             fprintf(stderr, "Unknown option %s is ignored.\n", optarg);
@@ -133,8 +123,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (f_local && !f_clean && !f_recent && !f_save && !f_format && argc == 0)
+    if (f_local && !f_clean && !f_recent && !f_save && !f_format && argc == 0) {
         printf("Viewing local files\n");
+    }
 
     /*
      * If -r option, return [n] most recent searches. Print an error if called
@@ -145,42 +136,47 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (f_recent && !f_local && !f_clean && !f_save && !f_format && argc == 0)
+    if (f_recent && !f_local && !f_clean && !f_save && !f_format && argc == 0) {
         printf("Viewing recent %d files!\n", view_recent);
-
-    /* Handle the entry name */
-    if (f_save && argc != 0)
-        for (; *argv != NULL; argv++) {
-            printf("%s\n", *argv);
-        }
-
-    /* Need to handle saving files */
-    // printf("Saving file %s!\n", "hello");
-
-
-    printf("Format chosen: %s\n", format);
+    }
 
     /*
-    CURL *curl = curl_easy_init();
-    if (curl) {
-        // const char *filename = "test.txt";
-        // FILE *output_file = fopen(filename, "w");
-        // if (!output_file) {
-        //     fprintf(stderr, "Failed to open output file %s\n", filename);
-        //     return 1;
-        // }
-        curl_easy_setopt(curl, CURLOPT_URL, "https://www.rfc-editor.org/rfc/rfc791.txt");
-        // curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, stdout);
-        curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
-        // fclose(output_file);
-
+     * At this point check if there are any additional arguments passed.
+     * If that's the case, exit out of the program.
+     */
+    if (argc > 1) {
+        fprintf(stderr, "Too many arguments passed.\n");
+        return 1;
     }
-    */
+
+    /* Time to do some fun string concatenation in C :) */
+    char *entry_to_curl = calloc(strlen(*argv) + strlen(format) + 2,
+                                 sizeof(char));
+
+    if (entry_to_curl == NULL) {
+        fprintf(stderr, "calloc failed\n");
+        return 1;
+    }
+
+    /* Format the entry string */
+    strcat(entry_to_curl, *argv);
+    strcat(entry_to_curl, ".");
+    strcat(entry_to_curl, format);
+
+    printf("%s\n", entry_to_curl);
+    // curl_entry(entry_to_curl);
+
+    /* If -s option, save the entry name in the specified format */
+    if (f_save && !f_local && !f_clean && !f_recent) {
+        printf("Saving entry %s\n", entry_to_curl);
+        // save_entry_local(*argv);
+    }
+
+    free(entry_to_curl);
 
     return 0;
 }
+
 
 /* Call this if using curl to save the file locally */
 void write_callback(void *contents, size_t size, size_t nitems, FILE *file)
@@ -223,3 +219,23 @@ void write_callback(void *contents, size_t size, size_t nitems, FILE *file)
  * or just set the environment variable ourselves :)
  * (first solution is probably the smartest move)
  */
+
+/*
+ * CURL *curl = curl_easy_init();
+ * if (curl) {
+ *     // const char *filename = "test.txt";
+ *     // FILE *output_file = fopen(filename, "w");
+ *     // if (!output_file) {
+ *     //     fprintf(stderr, "Failed to open output file %s\n", filename);
+ *     //     return 1;
+ *     // }
+ *     curl_easy_setopt(curl, CURLOPT_URL, "https://www.rfc-editor.org/rfc/rfc791.txt");
+ *     // curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+ *     curl_easy_setopt(curl, CURLOPT_WRITEDATA, stdout);
+ *     curl_easy_perform(curl);
+ *     curl_easy_cleanup(curl);
+ *     // fclose(output_file);
+
+ * }
+ */
+
