@@ -1,64 +1,37 @@
-/*
- * rfc - an IETF RFC query tool for the terminal.
- */
-
 #include <sys/stat.h>
 
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>    /* Contains sleep(u_int), getopt() function */
+#include <unistd.h>
+
 #include <curl/curl.h>
-
-/* flags */
-int f_clean;
-int f_local;
-int f_recent;
-int f_save;
-int f_format;
-
-const char *version = "version 20230912";
-
 
 char *setup_cache_path(void);
 void open_and_write(const char *);
 
+/* flags */
+int f_clean;     /* clean cache */
+int f_local;     /* display locally cached entries */
+int f_recent;    /* display recently viewed entries */
+int f_save;      /* save queried entry to local cache */
+int f_format;    /* query entry in specified format {html,txt} */
+
+const char *version = "version 20230912";
 
 int main(int argc, char *argv[])
 {
-    int ch;
-
     if (argc == 1) {
         fprintf(stderr,
                 "Usage: rfc [-V] [-c] [-l] [-r] [-f format] [-s] entry\n");
         return 1;
     }
 
-
-    char *final_cache_dir = setup_cache_path();
-
-    printf("Cache directory: %s\n", final_cache_dir);
-
-    /* Create any necessary files. */
-    struct stat sb;
-
-    if (stat(final_cache_dir, &sb) == -1) {
-        printf("Directory %s does not exist: creating is now...",
-                final_cache_dir);
-
-        if (0 != mkdir(final_cache_dir, 700)) {
-            fprintf(stderr, "Error when trying to create directory %s\n",
-                    final_cache_dir);
-            exit(1);
-        }
-
-        printf("done; Directory %s successfully created\n", final_cache_dir);
-    }
-
     /* Time to parse flags */
     const char *format = "txt";
 
+    int ch;
     while ((ch = getopt(argc, argv, "Vclrsf:")) != -1) {
         switch (ch) {
         case 'V':
@@ -95,6 +68,28 @@ int main(int argc, char *argv[])
     }
     argc -= optind;
     argv += optind;
+
+
+    /* Get path to rfc's local cache */
+    char *final_cache_dir = setup_cache_path();
+    /* printf("Cache directory: %s\n", final_cache_dir); */
+
+    /* Create any necessary files. */
+    struct stat sb;
+
+    if (stat(final_cache_dir, &sb) == -1) {
+        printf("Directory %s does not exist: creating is now...",
+                final_cache_dir);
+
+        if (mkdir(final_cache_dir, 700) != 0) {
+            fprintf(stderr, "Error when trying to create directory %s\n",
+                    final_cache_dir);
+            exit(1);
+        }
+
+        printf("done; Directory %s successfully created\n", final_cache_dir);
+    }
+
 
     /* If -c option, clean out local cache. */
     if (f_clean && (f_local || f_recent || f_save || f_format || argc != 0)) {
@@ -170,17 +165,20 @@ int main(int argc, char *argv[])
 
 char *setup_cache_path()
 {
-
-    /* Create a cache directory in the user's home directory */
+    /* Grab the user's home directory */
     const char *home_dir = getenv("HOME");
     if (home_dir == NULL) {
         perror("getenv");
         exit(1);
     }
 
+    /*
+     * Time to check to see if RFC_PATH exists in user's environment, otherwise
+     * default to "~/.cache/"
+     */
     const char *cache_dir = getenv("RFC_PATH");
     if (cache_dir == NULL) {
-        fprintf(stderr, "RFC_PATH is not set! Defaulting to \"%s/.cache/\".\n",
+        fprintf(stderr, "RFC_PATH is not set: defaulting to \"%s/.cache/\".\n",
                 home_dir);
         cache_dir = ".cache/";
     }
